@@ -56,9 +56,11 @@ instance HasCodec QueryTagsFormat where
 
 -- | QueryTagsConfig is the configuration created by the users to control query tags
 --
--- This config let's hasura know about the followingL
+-- This config let's hasura know about the following:
 --    1. In what format should the query tags be created
 --    2. Should they be appended to the SQL
+--    3. Should the request id be part of the query tags (which varies on each request
+--       and will cause prepared statements to be re-prepared every time)
 --
 -- FWIW, `QueryTagsConfig` are coupled along with the Source metadata. So you can
 -- also think `QueryTagsConfig` as the query tags configuration for each source.
@@ -79,7 +81,8 @@ instance HasCodec QueryTagsFormat where
 -- `mkDB..Plan` functions can get the QueryTagsConfig.
 data QueryTagsConfig = QueryTagsConfig
   { _qtcDisabled :: !Bool,
-    _qtcFormat :: !QueryTagsFormat
+    _qtcFormat :: !QueryTagsFormat,
+    _qtcOmitRequestId :: !Bool
   }
   deriving (Show, Eq, Generic)
 
@@ -96,6 +99,7 @@ instance FromJSON QueryTagsConfig where
     QueryTagsConfig
       <$> o .:? "disabled" .!= False
       <*> o .:? "format" .!= Standard
+      <*> o .:? "omit_request_id" .!= False
 
 instance HasCodec QueryTagsConfig where
   codec =
@@ -103,8 +107,9 @@ instance HasCodec QueryTagsConfig where
       QueryTagsConfig
         <$> optionalFieldWithDefault' "disabled" False .== _qtcDisabled
         <*> optionalFieldWithDefault' "format" Standard .== _qtcFormat
+        <*> optionalFieldWithDefault' "omit_request_id" False .== _qtcOmitRequestId
     where
       (.==) = (AC..=)
 
 defaultQueryTagsConfig :: QueryTagsConfig
-defaultQueryTagsConfig = QueryTagsConfig False Standard
+defaultQueryTagsConfig = QueryTagsConfig False Standard False
